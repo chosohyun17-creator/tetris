@@ -16,7 +16,7 @@
             background-color: #2c3e50;
             color: #ecf0f1;
             overflow: hidden;
-            touch-action: manipulation; /* 브라우저 기본 더블탭 줌 방지 */
+            touch-action: manipulation;
         }
 
         .game-container {
@@ -29,7 +29,6 @@
             position: relative;
         }
 
-        /* 게임 보드 사이즈 조정 (모바일 대응) */
         #game-board {
             --cell-size: min(25px, 6vw);
             width: calc(var(--cell-size) * 10);
@@ -60,7 +59,6 @@
         }
         .next-cell { border: 1px solid rgba(255,255,255,0.05); }
 
-        /* 모바일 컨트롤러 스타일 */
         .controls {
             margin-top: 20px;
             display: grid;
@@ -76,14 +74,13 @@
             border: none; border-radius: 10px;
             color: white; font-size: 20px; font-weight: bold;
             display: flex; justify-content: center; align-items: center;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         .ctrl-btn:active { background-color: #2ecc71; transform: scale(0.95); }
         .btn-rotate { grid-column: 2; }
         .btn-down { grid-row: 2; grid-column: 2; }
         .btn-drop { background-color: #e74c3c; grid-row: 2; grid-column: 3; }
 
-        /* 모달 공통 */
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.95); padding: 20px; border-radius: 15px;
@@ -91,7 +88,7 @@
         }
         .hidden { display: none !important; }
         input { padding: 10px; width: 80%; margin-bottom: 10px; border-radius: 5px; border: none; }
-        button.main-btn { padding: 10px 20px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; }
+        button.main-btn { padding: 10px 20px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
         .rank-list { text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto; font-size: 13px; }
     </style>
@@ -109,12 +106,12 @@
             </div>
             <p style="margin:2px 0;">Next:</p>
             <div id="next-block"></div>
-            <button id="rank-btn" style="background:#34495e; border:1px solid #7f8c8d; color:white; font-size:12px; padding:5px; margin-top:5px;">Ranking</button>
+            <button id="rank-btn" style="background:#34495e; border:1px solid #7f8c8d; color:white; font-size:12px; padding:5px; margin-top:5px; cursor:pointer;">Ranking</button>
         </div>
 
         <div id="start-modal" class="modal">
             <h2 style="color:#2ecc71;">조소현의 테트리스</h2>
-            <input type="text" id="player-name" placeholder="닉네임" maxlength="8">
+            <input type="text" id="player-name" placeholder="닉네임 입력" maxlength="8">
             <br>
             <button id="start-btn" class="main-btn">게임 시작</button>
         </div>
@@ -254,7 +251,6 @@
             });
         }
 
-        // 조작 함수 통합
         function moveLeft() { if(!collide(-1, 0)) { currentPiece.x--; draw(); } }
         function moveRight() { if(!collide(1, 0)) { currentPiece.x++; draw(); } }
         function moveDown() { if(!collide(0, 1)) { currentPiece.y++; draw(); } else { lock(); draw(); } }
@@ -291,18 +287,28 @@
             document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
+        // 핵심 수정 부분: 게임 초기화 및 시작 로직
         function startGame() {
             const nameInput = document.getElementById('player-name').value.trim();
             if(!nameInput) return alert("닉네임을 입력해주세요!");
+            
             playerName = nameInput;
             document.getElementById('display-name').textContent = playerName;
+            
+            // 모달 닫기
             document.getElementById('start-modal').classList.add('hidden');
             document.getElementById('game-over-modal').classList.add('hidden');
+            
+            // 데이터 초기화
             score = 0;
             document.getElementById('score').textContent = "0";
-            init();
-            createPiece();
+            nextPieceType = null;
+            
             if(gameInterval) clearInterval(gameInterval);
+            
+            init(); // 보드 다시 그리기
+            createPiece();
+            
             gameInterval = setInterval(() => {
                 if(!collide(0, 1)) currentPiece.y++;
                 else lock();
@@ -310,7 +316,7 @@
             }, 800);
         }
 
-        // 키보드 이벤트
+        // 이벤트 리스너
         document.addEventListener('keydown', e => {
             if(!gameInterval) return;
             if(e.key === 'ArrowLeft') moveLeft();
@@ -320,17 +326,30 @@
             if(e.key === ' ') hardDrop();
         });
 
-        // 모바일 터치 이벤트 연결
-        document.getElementById('ctrl-left').addEventListener('touchstart', e => { e.preventDefault(); moveLeft(); });
-        document.getElementById('ctrl-right').addEventListener('touchstart', e => { e.preventDefault(); moveRight(); });
-        document.getElementById('ctrl-down').addEventListener('touchstart', e => { e.preventDefault(); moveDown(); });
-        document.getElementById('ctrl-up').addEventListener('touchstart', e => { e.preventDefault(); rotate(); });
-        document.getElementById('ctrl-space').addEventListener('touchstart', e => { e.preventDefault(); hardDrop(); });
+        const touchBtns = {
+            'ctrl-left': moveLeft,
+            'ctrl-right': moveRight,
+            'ctrl-down': moveDown,
+            'ctrl-up': rotate,
+            'ctrl-space': hardDrop
+        };
+
+        Object.keys(touchBtns).forEach(id => {
+            document.getElementById(id).addEventListener('touchstart', e => {
+                e.preventDefault();
+                if(gameInterval) touchBtns[id]();
+            });
+        });
 
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('rank-btn').addEventListener('click', showRank);
         document.getElementById('close-rank').addEventListener('click', () => document.getElementById('rank-modal').classList.add('hidden'));
-        document.getElementById('restart-btn').addEventListener('click', () => document.getElementById('start-modal').classList.remove('hidden'));
+        
+        // 다시 시작 버튼 클릭 시 시작 모달로 돌아가거나 바로 시작
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-modal').classList.add('hidden');
+            document.getElementById('start-modal').classList.remove('hidden');
+        });
 
         init();
     </script>
