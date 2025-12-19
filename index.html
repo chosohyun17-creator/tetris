@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>조소현의 테트리스 - 모바일 에디션</title>
+    <title>조소현의 테트리스 - 컨트롤 최적화</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -87,7 +87,7 @@
             text-align: center; z-index: 100; min-width: 240px; border: 2px solid #2980b9;
         }
         .hidden { display: none !important; }
-        input { padding: 10px; width: 80%; margin-bottom: 10px; border-radius: 5px; border: none; }
+        input { padding: 10px; width: 80%; margin-bottom: 10px; border-radius: 5px; border: none; outline: none; }
         button.main-btn { padding: 10px 20px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
         .rank-list { text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto; font-size: 13px; }
@@ -251,6 +251,7 @@
             });
         }
 
+        // --- 조작 함수 ---
         function moveLeft() { if(!collide(-1, 0)) { currentPiece.x--; draw(); } }
         function moveRight() { if(!collide(1, 0)) { currentPiece.x++; draw(); } }
         function moveDown() { if(!collide(0, 1)) { currentPiece.y++; draw(); } else { lock(); draw(); } }
@@ -287,46 +288,48 @@
             document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
-        // 핵심 수정 부분: 게임 초기화 및 시작 로직
         function startGame() {
             const nameInput = document.getElementById('player-name').value.trim();
             if(!nameInput) return alert("닉네임을 입력해주세요!");
             
             playerName = nameInput;
             document.getElementById('display-name').textContent = playerName;
-            
-            // 모달 닫기
             document.getElementById('start-modal').classList.add('hidden');
             document.getElementById('game-over-modal').classList.add('hidden');
             
-            // 데이터 초기화
             score = 0;
             document.getElementById('score').textContent = "0";
             nextPieceType = null;
             
             if(gameInterval) clearInterval(gameInterval);
-            
-            init(); // 보드 다시 그리기
+            init();
             createPiece();
             
             gameInterval = setInterval(() => {
-                if(!collide(0, 1)) currentPiece.y++;
-                else lock();
-                draw();
+                moveDown();
             }, 800);
         }
 
-        // 이벤트 리스너
-        document.addEventListener('keydown', e => {
+        // --- 키보드 이벤트 리스너 ---
+        window.addEventListener('keydown', e => {
             if(!gameInterval) return;
-            if(e.key === 'ArrowLeft') moveLeft();
-            if(e.key === 'ArrowRight') moveRight();
-            if(e.key === 'ArrowDown') moveDown();
-            if(e.key === 'ArrowUp') rotate();
-            if(e.key === ' ') hardDrop();
+            
+            // 방향키 입력 시 화면 스크롤 방지
+            if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            switch(e.key) {
+                case 'ArrowLeft': moveLeft(); break;
+                case 'ArrowRight': moveRight(); break;
+                case 'ArrowDown': moveDown(); break;
+                case 'ArrowUp': rotate(); break;
+                case ' ': hardDrop(); break;
+            }
         });
 
-        const touchBtns = {
+        // --- 모바일 터치 이벤트 리스너 ---
+        const touchEvents = {
             'ctrl-left': moveLeft,
             'ctrl-right': moveRight,
             'ctrl-down': moveDown,
@@ -334,18 +337,21 @@
             'ctrl-space': hardDrop
         };
 
-        Object.keys(touchBtns).forEach(id => {
-            document.getElementById(id).addEventListener('touchstart', e => {
+        Object.keys(touchEvents).forEach(id => {
+            const el = document.getElementById(id);
+            // 클릭과 터치 모두 대응
+            el.addEventListener('touchstart', e => {
                 e.preventDefault();
-                if(gameInterval) touchBtns[id]();
+                if(gameInterval) touchEvents[id]();
+            });
+            el.addEventListener('click', e => {
+                if(gameInterval) touchEvents[id]();
             });
         });
 
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('rank-btn').addEventListener('click', showRank);
         document.getElementById('close-rank').addEventListener('click', () => document.getElementById('rank-modal').classList.add('hidden'));
-        
-        // 다시 시작 버튼 클릭 시 시작 모달로 돌아가거나 바로 시작
         document.getElementById('restart-btn').addEventListener('click', () => {
             document.getElementById('game-over-modal').classList.add('hidden');
             document.getElementById('start-modal').classList.remove('hidden');
