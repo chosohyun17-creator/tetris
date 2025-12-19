@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>조소현의 테트리스 - 컨트롤 최적화</title>
+    <title>조소현의 테트리스 - 컨트롤 통합 버전</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -59,38 +59,46 @@
         }
         .next-cell { border: 1px solid rgba(255,255,255,0.05); }
 
+        /* 조작 컨트롤러 레이아웃 */
         .controls {
             margin-top: 20px;
             display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-template-rows: repeat(2, 60px);
-            gap: 10px;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(2, 65px);
+            gap: 12px;
             justify-content: center;
         }
 
         .ctrl-btn {
-            width: 60px; height: 60px;
+            width: 65px; height: 65px;
             background-color: #5d6d7e;
-            border: none; border-radius: 10px;
-            color: white; font-size: 20px; font-weight: bold;
+            border: none; border-radius: 12px;
+            color: white; font-size: 24px; font-weight: bold;
             display: flex; justify-content: center; align-items: center;
             user-select: none;
+            cursor: pointer;
+            box-shadow: 0 4px #2c3e50;
         }
-        .ctrl-btn:active { background-color: #2ecc71; transform: scale(0.95); }
-        .btn-rotate { grid-column: 2; }
+        .ctrl-btn:active { 
+            background-color: #2ecc71; 
+            box-shadow: 0 2px #27ae60;
+            transform: translateY(2px);
+        }
+        
+        .btn-rotate { grid-column: 2; background-color: #3498db; } /* 회전 버튼 강조 */
         .btn-down { grid-row: 2; grid-column: 2; }
-        .btn-drop { background-color: #e74c3c; grid-row: 2; grid-column: 3; }
+        .btn-drop { background-color: #e74c3c; grid-row: 2; grid-column: 3; font-size: 18px; }
 
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95); padding: 20px; border-radius: 15px;
-            text-align: center; z-index: 100; min-width: 240px; border: 2px solid #2980b9;
+            background: rgba(0, 0, 0, 0.95); padding: 25px; border-radius: 15px;
+            text-align: center; z-index: 100; min-width: 250px; border: 2px solid #2980b9;
         }
         .hidden { display: none !important; }
-        input { padding: 10px; width: 80%; margin-bottom: 10px; border-radius: 5px; border: none; outline: none; }
-        button.main-btn { padding: 10px 20px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        input { padding: 12px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: none; outline: none; font-size: 16px; }
+        button.main-btn { padding: 12px 25px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
-        .rank-list { text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto; font-size: 13px; }
+        .rank-list { text-align: left; margin: 15px 0; max-height: 180px; overflow-y: auto; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -100,13 +108,13 @@
 
         <div class="info-panel">
             <h2 class="game-title">조소현의<br>테트리스</h2>
-            <div style="background:#2c3e50; padding:5px; border-radius:5px;">
+            <div style="background:#2c3e50; padding:8px; border-radius:5px; border-left: 3px solid #f1c40f;">
                 <p style="margin:2px 0;">Score: <b id="score" style="color:#f1c40f;">0</b></p>
                 <p style="margin:2px 0;"><small id="display-name">-</small></p>
             </div>
-            <p style="margin:2px 0;">Next:</p>
+            <p style="margin:5px 0 2px 0;">Next Piece:</p>
             <div id="next-block"></div>
-            <button id="rank-btn" style="background:#34495e; border:1px solid #7f8c8d; color:white; font-size:12px; padding:5px; margin-top:5px; cursor:pointer;">Ranking</button>
+            <button id="rank-btn" style="background:#34495e; border:1px solid #7f8c8d; color:white; font-size:12px; padding:6px; margin-top:10px; cursor:pointer; width: 100%;">Ranking</button>
         </div>
 
         <div id="start-modal" class="modal">
@@ -124,17 +132,17 @@
 
         <div id="game-over-modal" class="modal hidden">
             <h2 style="color:#e74c3c;">Game Over</h2>
-            <p>점수: <span id="final-score">0</span></p>
+            <p>최종 점수: <span id="final-score">0</span></p>
             <button id="restart-btn" class="main-btn">다시 시작</button>
         </div>
     </div>
 
     <div class="controls">
-        <button class="ctrl-btn btn-rotate" id="ctrl-up">↻</button>
-        <button class="ctrl-btn" id="ctrl-left">←</button>
-        <button class="ctrl-btn btn-down" id="ctrl-down">↓</button>
-        <button class="ctrl-btn" id="ctrl-right">→</button>
-        <button class="ctrl-btn btn-drop" id="ctrl-space">▼</button>
+        <button class="ctrl-btn btn-rotate" id="ctrl-up" title="회전">↻</button>
+        <button class="ctrl-btn" id="ctrl-left" title="왼쪽">←</button>
+        <button class="ctrl-btn btn-down" id="ctrl-down" title="아래">↓</button>
+        <button class="ctrl-btn" id="ctrl-right" title="오른쪽">→</button>
+        <button class="ctrl-btn btn-drop" id="ctrl-space" title="즉시 낙하">DROP</button>
     </div>
 
     <script>
@@ -251,7 +259,7 @@
             });
         }
 
-        // --- 조작 함수 ---
+        // --- 조작 핵심 함수 ---
         function moveLeft() { if(!collide(-1, 0)) { currentPiece.x--; draw(); } }
         function moveRight() { if(!collide(1, 0)) { currentPiece.x++; draw(); } }
         function moveDown() { if(!collide(0, 1)) { currentPiece.y++; draw(); } else { lock(); draw(); } }
@@ -310,11 +318,11 @@
             }, 800);
         }
 
-        // --- 키보드 이벤트 리스너 ---
+        // --- 1. 키보드 조작 기능 ---
         window.addEventListener('keydown', e => {
             if(!gameInterval) return;
             
-            // 방향키 입력 시 화면 스크롤 방지
+            // 방향키 입력 시 화면이 밀리는 현상 방지
             if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
                 e.preventDefault();
             }
@@ -328,8 +336,8 @@
             }
         });
 
-        // --- 모바일 터치 이벤트 리스너 ---
-        const touchEvents = {
+        // --- 2. 프로그램 내 버튼 조작 기능 (터치/클릭 모두 지원) ---
+        const controlsMap = {
             'ctrl-left': moveLeft,
             'ctrl-right': moveRight,
             'ctrl-down': moveDown,
@@ -337,21 +345,26 @@
             'ctrl-space': hardDrop
         };
 
-        Object.keys(touchEvents).forEach(id => {
-            const el = document.getElementById(id);
-            // 클릭과 터치 모두 대응
-            el.addEventListener('touchstart', e => {
+        Object.keys(controlsMap).forEach(id => {
+            const btn = document.getElementById(id);
+            
+            // 터치 시작 시 즉시 실행 (모바일 최적화)
+            btn.addEventListener('touchstart', e => {
                 e.preventDefault();
-                if(gameInterval) touchEvents[id]();
+                if(gameInterval) controlsMap[id]();
             });
-            el.addEventListener('click', e => {
-                if(gameInterval) touchEvents[id]();
+
+            // 마우스 클릭 시 실행 (PC용)
+            btn.addEventListener('mousedown', e => {
+                e.preventDefault();
+                if(gameInterval) controlsMap[id]();
             });
         });
 
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('rank-btn').addEventListener('click', showRank);
         document.getElementById('close-rank').addEventListener('click', () => document.getElementById('rank-modal').classList.add('hidden'));
+        
         document.getElementById('restart-btn').addEventListener('click', () => {
             document.getElementById('game-over-modal').classList.add('hidden');
             document.getElementById('start-modal').classList.remove('hidden');
