@@ -2,35 +2,36 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>조소현의 테트리스 - Ranking Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>조소현의 테트리스 - 모바일 에디션</title>
     <style>
-        /* 기존 스타일 유지 및 제목 스타일 강화 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #2c3e50;
             color: #ecf0f1;
             overflow: hidden;
+            touch-action: manipulation; /* 브라우저 기본 더블탭 줌 방지 */
         }
 
         .game-container {
             display: flex;
-            gap: 20px;
-            padding: 20px;
+            gap: 15px;
+            padding: 15px;
             border-radius: 10px;
             background-color: #34495e;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
             position: relative;
         }
 
-        /* 게임 보드 */
+        /* 게임 보드 사이즈 조정 (모바일 대응) */
         #game-board {
-            --cell-size: 25px;
+            --cell-size: min(25px, 6vw);
             width: calc(var(--cell-size) * 10);
             height: calc(var(--cell-size) * 20);
             border: 4px solid #2980b9;
@@ -41,8 +42,6 @@
         }
 
         .block { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.1); }
-        
-        /* 블록 색상 */
         .I { background-color: #00FFFF; }
         .O { background-color: #FFFF00; }
         .T { background-color: #800080; }
@@ -51,41 +50,50 @@
         .J { background-color: #0000FF; }
         .L { background-color: #FF7F00; }
 
-        .info-panel { width: 180px; display: flex; flex-direction: column; gap: 10px; }
-        
-        /* 제목 스타일링 */
-        .game-title {
-            margin: 0;
-            color: #f1c40f; /* 황금색으로 변경 */
-            font-size: 1.4em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            line-height: 1.2;
-            word-break: keep-all;
-        }
+        .info-panel { width: 100px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+        .game-title { margin: 0; color: #f1c40f; font-size: 1.1em; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
 
         #next-block {
-            width: 100px; height: 100px;
+            width: 60px; height: 60px;
             display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
             border: 2px solid #5499c7; background-color: #1c2833;
         }
-        .next-cell { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
+        .next-cell { border: 1px solid rgba(255,255,255,0.05); }
 
+        /* 모바일 컨트롤러 스타일 */
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .ctrl-btn {
+            width: 60px; height: 60px;
+            background-color: #5d6d7e;
+            border: none; border-radius: 10px;
+            color: white; font-size: 20px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        .ctrl-btn:active { background-color: #2ecc71; transform: scale(0.95); }
+        .btn-rotate { grid-column: 2; }
+        .btn-down { grid-row: 2; grid-column: 2; }
+        .btn-drop { background-color: #e74c3c; grid-row: 2; grid-column: 3; }
+
+        /* 모달 공통 */
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9); padding: 25px; border-radius: 15px;
-            text-align: center; z-index: 100; min-width: 260px; border: 2px solid #2980b9;
+            background: rgba(0, 0, 0, 0.95); padding: 20px; border-radius: 15px;
+            text-align: center; z-index: 100; min-width: 240px; border: 2px solid #2980b9;
         }
         .hidden { display: none !important; }
+        input { padding: 10px; width: 80%; margin-bottom: 10px; border-radius: 5px; border: none; }
+        button.main-btn { padding: 10px 20px; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; }
 
-        input { padding: 10px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: none; font-size: 16px; }
-        button {
-            padding: 12px 20px; background-color: #2ecc71; border: none;
-            color: white; cursor: pointer; border-radius: 5px; font-weight: bold;
-        }
-        button:hover { background-color: #27ae60; }
-        
-        .rank-list { text-align: left; margin: 15px 0; max-height: 200px; overflow-y: auto; font-size: 14px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; }
+        .rank-list { text-align: left; margin: 10px 0; max-height: 150px; overflow-y: auto; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -95,38 +103,44 @@
 
         <div class="info-panel">
             <h2 class="game-title">조소현의<br>테트리스</h2>
-            <div style="background:#2c3e50; padding:10px; border-radius:5px;">
-                <p style="margin:5px 0;">Player: <b id="display-name">-</b></p>
-                <p style="margin:5px 0;">Score: <b id="score" style="color:#f1c40f;">0</b></p>
+            <div style="background:#2c3e50; padding:5px; border-radius:5px;">
+                <p style="margin:2px 0;">Score: <b id="score" style="color:#f1c40f;">0</b></p>
+                <p style="margin:2px 0;"><small id="display-name">-</small></p>
             </div>
-            <p style="margin:5px 0;">Next Block:</p>
+            <p style="margin:2px 0;">Next:</p>
             <div id="next-block"></div>
-            <button id="rank-btn" style="background-color:#34495e; border:1px solid #7f8c8d;">Ranking</button>
+            <button id="rank-btn" style="background:#34495e; border:1px solid #7f8c8d; color:white; font-size:12px; padding:5px; margin-top:5px;">Ranking</button>
         </div>
 
         <div id="start-modal" class="modal">
             <h2 style="color:#2ecc71;">조소현의 테트리스</h2>
-            <p style="font-size: 0.9em; margin-bottom: 15px;">닉네임을 입력하고 시작하세요!</p>
-            <input type="text" id="player-name" placeholder="닉네임 입력" maxlength="8">
+            <input type="text" id="player-name" placeholder="닉네임" maxlength="8">
             <br>
-            <button id="start-btn">게임 시작</button>
+            <button id="start-btn" class="main-btn">게임 시작</button>
         </div>
 
         <div id="rank-modal" class="modal hidden">
-            <h2>🏆 Top 10</h2>
+            <h3>🏆 Top 10</h3>
             <div id="rank-content" class="rank-list"></div>
-            <button id="close-rank">닫기</button>
+            <button id="close-rank" class="main-btn">닫기</button>
         </div>
 
         <div id="game-over-modal" class="modal hidden">
             <h2 style="color:#e74c3c;">Game Over</h2>
-            <p>최종 점수: <span id="final-score">0</span></p>
-            <button id="restart-btn">다시 시작</button>
+            <p>점수: <span id="final-score">0</span></p>
+            <button id="restart-btn" class="main-btn">다시 시작</button>
         </div>
     </div>
 
+    <div class="controls">
+        <button class="ctrl-btn btn-rotate" id="ctrl-up">↻</button>
+        <button class="ctrl-btn" id="ctrl-left">←</button>
+        <button class="ctrl-btn btn-down" id="ctrl-down">↓</button>
+        <button class="ctrl-btn" id="ctrl-right">→</button>
+        <button class="ctrl-btn btn-drop" id="ctrl-space">▼</button>
+    </div>
+
     <script>
-        // 자바스크립트 로직은 기존과 동일합니다.
         const ROWS = 20, COLS = 10;
         const TETROMINOES = {
             'I': [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]],
@@ -137,7 +151,6 @@
             'T': [[0,1,0], [1,1,1], [0,0,0]],
             'Z': [[1,1,0], [0,1,1], [0,0,0]]
         };
-        const COLORS = { 'I':'I','J':'J','L':'L','O':'O','S':'S','T':'T','Z':'Z' };
 
         let board = [], currentPiece = null, nextPieceType = null;
         let score = 0, gameInterval = null, playerName = "";
@@ -184,7 +197,7 @@
         function lock() {
             currentPiece.shape.forEach((row, r) => {
                 row.forEach((val, c) => {
-                    if(val) board[currentPiece.y + r][currentPiece.x + c] = currentPiece.type;
+                    if(val && currentPiece.y + r >= 0) board[currentPiece.y + r][currentPiece.x + c] = currentPiece.type;
                 });
             });
             clearLines();
@@ -241,6 +254,19 @@
             });
         }
 
+        // 조작 함수 통합
+        function moveLeft() { if(!collide(-1, 0)) { currentPiece.x--; draw(); } }
+        function moveRight() { if(!collide(1, 0)) { currentPiece.x++; draw(); } }
+        function moveDown() { if(!collide(0, 1)) { currentPiece.y++; draw(); } else { lock(); draw(); } }
+        function rotate() {
+            const rotated = currentPiece.shape[0].map((_, i) => currentPiece.shape.map(row => row[i]).reverse());
+            if(!collide(0, 0, rotated)) { currentPiece.shape = rotated; draw(); }
+        }
+        function hardDrop() {
+            while(!collide(0, 1)) currentPiece.y++;
+            lock(); draw();
+        }
+
         function handleRanking() {
             let ranks = JSON.parse(localStorage.getItem('tetrisRank') || '[]');
             ranks.push({ name: playerName, score: score });
@@ -252,11 +278,8 @@
             const ranks = JSON.parse(localStorage.getItem('tetrisRank') || '[]');
             const content = document.getElementById('rank-content');
             content.innerHTML = ranks.map((r, i) => `
-                <div class="rank-item">
-                    <span>${i+1}. ${r.name}</span>
-                    <span>${r.score}</span>
-                </div>
-            `).join('') || "기록이 없습니다.";
+                <div class="rank-item"><span>${i+1}. ${r.name}</span><span>${r.score}</span></div>
+            `).join('') || "기록 없음";
             document.getElementById('rank-modal').classList.remove('hidden');
         }
 
@@ -287,21 +310,22 @@
             }, 800);
         }
 
+        // 키보드 이벤트
         document.addEventListener('keydown', e => {
             if(!gameInterval) return;
-            if(e.key === 'ArrowLeft' && !collide(-1, 0)) currentPiece.x--;
-            if(e.key === 'ArrowRight' && !collide(1, 0)) currentPiece.x++;
-            if(e.key === 'ArrowDown' && !collide(0, 1)) currentPiece.y++;
-            if(e.key === 'ArrowUp') {
-                const rotated = currentPiece.shape[0].map((_, i) => currentPiece.shape.map(row => row[i]).reverse());
-                if(!collide(0, 0, rotated)) currentPiece.shape = rotated;
-            }
-            if(e.key === ' ') {
-                while(!collide(0, 1)) currentPiece.y++;
-                lock();
-            }
-            draw();
+            if(e.key === 'ArrowLeft') moveLeft();
+            if(e.key === 'ArrowRight') moveRight();
+            if(e.key === 'ArrowDown') moveDown();
+            if(e.key === 'ArrowUp') rotate();
+            if(e.key === ' ') hardDrop();
         });
+
+        // 모바일 터치 이벤트 연결
+        document.getElementById('ctrl-left').addEventListener('touchstart', e => { e.preventDefault(); moveLeft(); });
+        document.getElementById('ctrl-right').addEventListener('touchstart', e => { e.preventDefault(); moveRight(); });
+        document.getElementById('ctrl-down').addEventListener('touchstart', e => { e.preventDefault(); moveDown(); });
+        document.getElementById('ctrl-up').addEventListener('touchstart', e => { e.preventDefault(); rotate(); });
+        document.getElementById('ctrl-space').addEventListener('touchstart', e => { e.preventDefault(); hardDrop(); });
 
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('rank-btn').addEventListener('click', showRank);
