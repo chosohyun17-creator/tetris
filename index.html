@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Tetris with Ranking</title>
+    <title>JS Tetris - Ranking Edition</title>
     <style>
+        /* 스타일 설정 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             display: flex;
@@ -14,6 +15,7 @@
             margin: 0;
             background-color: #2c3e50;
             color: #ecf0f1;
+            overflow: hidden;
         }
 
         .game-container {
@@ -22,52 +24,59 @@
             padding: 20px;
             border-radius: 10px;
             background-color: #34495e;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
             position: relative;
         }
 
+        /* 게임 보드 */
         #game-board {
             --cell-size: 25px;
             width: calc(var(--cell-size) * 10);
             height: calc(var(--cell-size) * 20);
-            border: 5px solid #2980b9;
+            border: 4px solid #2980b9;
             background-color: #1c2833;
             display: grid;
-            grid-template-columns: repeat(10, 1fr); 
+            grid-template-columns: repeat(10, 1fr);
             grid-template-rows: repeat(20, 1fr);
         }
 
-        .block { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
-        .block.I { background-color: #00FFFF; }
-        .block.O { background-color: #FFFF00; }
-        .block.T { background-color: #800080; }
-        .block.S { background-color: #00FF00; }
-        .block.Z { background-color: #FF0000; }
-        .block.J { background-color: #0000FF; }
-        .block.L { background-color: #FF7F00; }
+        .block { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* 블록 색상 */
+        .I { background-color: #00FFFF; }
+        .O { background-color: #FFFF00; }
+        .T { background-color: #800080; }
+        .S { background-color: #00FF00; }
+        .Z { background-color: #FF0000; }
+        .J { background-color: #0000FF; }
+        .L { background-color: #FF7F00; }
 
-        .info-panel { width: 180px; }
+        /* 정보 패널 */
+        .info-panel { width: 180px; display: flex; flex-direction: column; gap: 10px; }
+        
         #next-block {
             width: 100px; height: 100px;
             display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
-            border: 2px solid #5499c7; background-color: #1c2833; margin-bottom: 20px;
+            border: 2px solid #5499c7; background-color: #1c2833;
         }
         .next-cell { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
 
-        /* 모달 스타일 (이름 입력 및 랭킹) */
+        /* 모달 시스템 */
         .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95); padding: 30px; border-radius: 15px;
-            text-align: center; z-index: 100; min-width: 250px; border: 2px solid #2980b9;
+            background: rgba(0, 0, 0, 0.9); padding: 25px; border-radius: 15px;
+            text-align: center; z-index: 100; min-width: 260px; border: 2px solid #2980b9;
         }
-        .hidden { display: none; }
-        input { padding: 10px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: none; }
+        .hidden { display: none !important; }
+
+        input { padding: 10px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: none; font-size: 16px; }
         button {
-            padding: 10px 20px; background-color: #2ecc71; border: none;
-            color: white; cursor: pointer; border-radius: 5px; margin: 5px;
+            padding: 12px 20px; background-color: #2ecc71; border: none;
+            color: white; cursor: pointer; border-radius: 5px; font-weight: bold;
         }
         button:hover { background-color: #27ae60; }
-        .rank-list { text-align: left; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        
+        .rank-list { text-align: left; margin: 15px 0; max-height: 200px; overflow-y: auto; font-size: 14px; }
         .rank-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; }
     </style>
 </head>
@@ -77,239 +86,229 @@
         <div id="game-board"></div>
 
         <div class="info-panel">
-            <h3>TETRIS</h3>
-            <p>Player: <span id="display-name">-</span></p>
-            <p>Score: <span id="score">0</span></p>
-            <p>Next:</p>
-            <div id="next-block"></div>
-            <button id="rank-btn">Ranking</button>
-            <div style="font-size: 12px; margin-top: 10px; color: #bdc3c7;">
-                Arrows: Move/Rotate<br>Space: Hard Drop
+            <h2 style="margin:0; color:#3498db;">TETRIS</h2>
+            <div style="background:#2c3e50; padding:10px; border-radius:5px;">
+                <p style="margin:5px 0;">Player: <b id="display-name">-</b></p>
+                <p style="margin:5px 0;">Score: <b id="score" style="color:#f1c40f;">0</b></p>
             </div>
+            <p style="margin:5px 0;">Next Block:</p>
+            <div id="next-block"></div>
+            <button id="rank-btn" style="background-color:#34495e; border:1px solid #7f8c8d;">Ranking</button>
         </div>
 
-        <div id="name-modal" class="modal">
-            <h2>Enter Name</h2>
-            <input type="text" id="player-name" placeholder="Name" maxlength="10">
+        <div id="start-modal" class="modal">
+            <h2 style="color:#2ecc71;">New Game</h2>
+            <input type="text" id="player-name" placeholder="닉네임 입력" maxlength="8">
             <br>
-            <button id="start-btn">Game Start</button>
+            <button id="start-btn">게임 시작</button>
         </div>
 
         <div id="rank-modal" class="modal hidden">
-            <h2>Top 10 Rankings</h2>
+            <h2>🏆 Top 10</h2>
             <div id="rank-content" class="rank-list"></div>
-            <button id="close-rank">Close</button>
+            <button id="close-rank">닫기</button>
         </div>
 
         <div id="game-over-modal" class="modal hidden">
-            <h2 style="color: #e74c3c;">Game Over</h2>
-            <p>Your Score: <span id="final-score">0</span></p>
-            <button id="restart-btn">Try Again</button>
+            <h2 style="color:#e74c3c;">Game Over</h2>
+            <p>최종 점수: <span id="final-score">0</span></p>
+            <button id="restart-btn">다시 시작</button>
         </div>
     </div>
 
     <script>
+        // 게임 설정
         const ROWS = 20, COLS = 10;
-        const gameBoard = document.getElementById('game-board');
-        const scoreElement = document.getElementById('score');
-        const nextBlockContainer = document.getElementById('next-block');
-        
-        let board = [], currentBlock = null, nextBlockType = null;
-        let gameLoop, score = 0, gameRunning = false, playerName = "";
-
         const TETROMINOES = {
-            'I': { shape: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]], type: 'I' },
-            'J': { shape: [[1,0,0], [1,1,1], [0,0,0]], type: 'J' },
-            'L': { shape: [[0,0,1], [1,1,1], [0,0,0]], type: 'L' },
-            'O': { shape: [[1,1], [1,1]], type: 'O' },
-            'S': { shape: [[0,1,1], [1,1,0], [0,0,0]], type: 'S' },
-            'T': { shape: [[0,1,0], [1,1,1], [0,0,0]], type: 'T' },
-            'Z': { shape: [[1,1,0], [0,1,1], [0,0,0]], type: 'Z' }
+            'I': [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]],
+            'J': [[1,0,0], [1,1,1], [0,0,0]],
+            'L': [[0,0,1], [1,1,1], [0,0,0]],
+            'O': [[1,1], [1,1]],
+            'S': [[0,1,1], [1,1,0], [0,0,0]],
+            'T': [[0,1,0], [1,1,1], [0,0,0]],
+            'Z': [[1,1,0], [0,1,1], [0,0,0]]
         };
-        const TETROMINO_KEYS = Object.keys(TETROMINOES);
+        const COLORS = { 'I':'I','J':'J','L':'L','O':'O','S':'S','T':'T','Z':'Z' };
 
-        // --- 초기화 및 UI 제어 ---
-        function initBoard() {
+        let board = [], currentPiece = null, nextPieceType = null;
+        let score = 0, gameInterval = null, playerName = "";
+
+        // 초기화
+        function init() {
             board = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
-            gameBoard.innerHTML = '';
-            for (let i = 0; i < ROWS * COLS; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('block');
-                gameBoard.appendChild(cell);
+            const boardEl = document.getElementById('game-board');
+            boardEl.innerHTML = '';
+            for(let i=0; i<ROWS*COLS; i++) boardEl.appendChild(document.createElement('div')).classList.add('block');
+            
+            const nextEl = document.getElementById('next-block');
+            nextEl.innerHTML = '';
+            for(let i=0; i<16; i++) nextEl.appendChild(document.createElement('div')).classList.add('next-cell');
+        }
+
+        // 블록 생성
+        function createPiece() {
+            const type = nextPieceType || Object.keys(TETROMINOES)[Math.floor(Math.random()*7)];
+            nextPieceType = Object.keys(TETROMINOES)[Math.floor(Math.random()*7)];
+            currentPiece = {
+                type: type,
+                shape: TETROMINOES[type],
+                x: Math.floor(COLS/2) - Math.floor(TETROMINOES[type][0].length/2),
+                y: 0
+            };
+            drawNext();
+            if(collide()) return false;
+            return true;
+        }
+
+        // 충돌 검사
+        function collide(nx = 0, ny = 0, newShape = null) {
+            const shape = newShape || currentPiece.shape;
+            for(let r=0; r<shape.length; r++) {
+                for(let c=0; c<shape[r].length; c++) {
+                    if(shape[r][c]) {
+                        let targetX = currentPiece.x + c + nx;
+                        let targetY = currentPiece.y + r + ny;
+                        if(targetX < 0 || targetX >= COLS || targetY >= ROWS || (targetY >= 0 && board[targetY][targetX])) return true;
+                    }
+                }
             }
-            nextBlockContainer.innerHTML = '';
-            for (let i = 0; i < 16; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('next-cell');
-                nextBlockContainer.appendChild(cell);
+            return false;
+        }
+
+        // 블록 고정
+        function lock() {
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if(val) board[currentPiece.y + r][currentPiece.x + c] = currentPiece.type;
+                });
+            });
+            clearLines();
+            if(!createPiece()) gameOver();
+        }
+
+        // 줄 삭제
+        function clearLines() {
+            let rowsCleared = 0;
+            for(let r = ROWS - 1; r >= 0; r--) {
+                if(board[r].every(cell => cell !== 0)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    rowsCleared++;
+                    r++;
+                }
+            }
+            if(rowsCleared > 0) {
+                score += [0, 100, 300, 500, 800][rowsCleared];
+                document.getElementById('score').textContent = score;
             }
         }
 
-        function renderBoard() {
-            const cells = gameBoard.querySelectorAll('.block');
+        // 화면 그리기
+        function draw() {
+            const cells = document.querySelectorAll('#game-board .block');
             board.forEach((row, r) => {
-                row.forEach((type, c) => {
-                    const idx = r * COLS + c;
-                    cells[idx].className = 'block' + (type ? ' ' + type : '');
+                row.forEach((val, c) => {
+                    const cell = cells[r * COLS + c];
+                    cell.className = 'block' + (val ? ' ' + val : '');
                 });
             });
-            if (currentBlock) {
-                currentBlock.shape.forEach((row, r) => {
+            if(currentPiece) {
+                currentPiece.shape.forEach((row, r) => {
                     row.forEach((val, c) => {
-                        if (val) {
-                            const br = currentBlock.y + r, bc = currentBlock.x + c;
-                            if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
-                                cells[br * COLS + bc].className = 'block ' + currentBlock.type;
-                            }
+                        if(val) {
+                            const idx = (currentPiece.y + r) * COLS + (currentPiece.x + c);
+                            if(idx >= 0 && idx < cells.length) cells[idx].className = 'block ' + currentPiece.type;
                         }
                     });
                 });
             }
-            scoreElement.textContent = score;
         }
 
-        function renderNextBlock() {
-            const cells = nextBlockContainer.querySelectorAll('.next-cell');
+        function drawNext() {
+            const cells = document.querySelectorAll('.next-cell');
             cells.forEach(c => c.className = 'next-cell');
-            const data = TETROMINOES[nextBlockType];
-            let ox = (nextBlockType === 'I') ? 0 : 1;
-            let oy = (nextBlockType === 'I' || nextBlockType === 'O') ? 0 : 1;
-
-            data.shape.forEach((row, r) => {
+            const shape = TETROMINOES[nextPieceType];
+            shape.forEach((row, r) => {
                 row.forEach((val, c) => {
-                    if (val) {
-                        const idx = (r + oy) * 4 + (c + ox);
-                        if(cells[idx]) cells[idx].classList.add(nextBlockType);
+                    if(val) {
+                        const idx = (r + (nextPieceType==='I'?0:1)) * 4 + (c + (nextPieceType==='I'?0:1));
+                        if(cells[idx]) cells[idx].className = 'next-cell ' + nextPieceType;
                     }
                 });
             });
         }
 
-        // --- 게임 로직 ---
-        function checkCollision(shape, x, y) {
-            return shape.some((row, r) => row.some((val, c) => {
-                if (!val) return false;
-                let bc = x + c, br = y + r;
-                return bc < 0 || bc >= COLS || br >= ROWS || (br >= 0 && board[br][bc] !== 0);
-            }));
+        // 랭킹 저장/로드
+        function handleRanking() {
+            let ranks = JSON.parse(localStorage.getItem('tetrisRank') || '[]');
+            ranks.push({ name: playerName, score: score });
+            ranks.sort((a,b) => b.score - a.score);
+            localStorage.setItem('tetrisRank', JSON.stringify(ranks.slice(0, 10)));
         }
 
-        function generateBlock() {
-            const type = nextBlockType || TETROMINO_KEYS[Math.floor(Math.random() * 7)];
-            nextBlockType = TETROMINO_KEYS[Math.floor(Math.random() * 7)];
-            currentBlock = { shape: TETROMINOES[type].shape, type: type, x: 3, y: 0 };
-            renderNextBlock();
-            if (checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y)) return false;
-            return true;
-        }
-
-        function freezeBlock() {
-            currentBlock.shape.forEach((row, r) => {
-                row.forEach((val, c) => {
-                    if (val && currentBlock.y + r >= 0) board[currentBlock.y + r][currentBlock.x + c] = currentBlock.type;
-                });
-            });
-            clearLines();
-        }
-
-        function clearLines() {
-            let lines = 0;
-            for (let r = ROWS - 1; r >= 0; r--) {
-                if (board[r].every(v => v !== 0)) {
-                    board.splice(r, 1);
-                    board.unshift(Array(COLS).fill(0));
-                    lines++; r++;
-                }
-            }
-            score += [0, 100, 300, 500, 800][lines] || 0;
-        }
-
-        function rotate(shape) {
-            return shape[0].map((_, i) => shape.map(row => row[i]).reverse());
-        }
-
-        function dropBlock() {
-            if (!checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y + 1)) {
-                currentBlock.y++;
-            } else {
-                freezeBlock();
-                if (!generateBlock()) gameOver();
-            }
-            renderBoard();
-        }
-
-        // --- 랭킹 시스템 ---
-        function saveScore(name, score) {
-            let ranks = JSON.parse(localStorage.getItem('tetrisRanks') || '[]');
-            ranks.push({ name, score, date: new Date().toLocaleDateString() });
-            ranks.sort((a, b) => b.score - a.score);
-            localStorage.setItem('tetrisRanks', JSON.stringify(ranks.slice(0, 10)));
-        }
-
-        function showRanking() {
-            const ranks = JSON.parse(localStorage.getItem('tetrisRanks') || '[]');
+        function showRank() {
+            const ranks = JSON.parse(localStorage.getItem('tetrisRank') || '[]');
             const content = document.getElementById('rank-content');
             content.innerHTML = ranks.map((r, i) => `
                 <div class="rank-item">
                     <span>${i+1}. ${r.name}</span>
                     <span>${r.score}</span>
                 </div>
-            `).join('') || "No records yet!";
+            `).join('') || "기록이 없습니다.";
             document.getElementById('rank-modal').classList.remove('hidden');
         }
 
-        // --- 게임 관리 ---
-        function startGame() {
-            const inputName = document.getElementById('player-name').value.trim();
-            if (!inputName) { alert("Please enter your name!"); return; }
-            playerName = inputName;
-            document.getElementById('display-name').textContent = playerName;
-            document.getElementById('name-modal').classList.add('hidden');
-            document.getElementById('game-over-modal').classList.add('hidden');
-            
-            score = 0;
-            initBoard();
-            generateBlock();
-            gameRunning = true;
-            gameLoop = setInterval(dropBlock, 800);
-        }
-
+        // 게임 제어
         function gameOver() {
-            clearInterval(gameLoop);
-            gameRunning = false;
-            saveScore(playerName, score);
+            clearInterval(gameInterval);
+            gameInterval = null;
+            handleRanking();
             document.getElementById('final-score').textContent = score;
             document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
-        // --- 이벤트 리스너 ---
-        document.getElementById('start-btn').addEventListener('click', startGame);
-        document.getElementById('restart-btn').addEventListener('click', () => {
+        function startGame() {
+            const nameInput = document.getElementById('player-name').value.trim();
+            if(!nameInput) return alert("닉네임을 입력해주세요!");
+            playerName = nameInput;
+            document.getElementById('display-name').textContent = playerName;
+            document.getElementById('start-modal').classList.add('hidden');
             document.getElementById('game-over-modal').classList.add('hidden');
-            document.getElementById('name-modal').classList.remove('hidden');
-        });
-        document.getElementById('rank-btn').addEventListener('click', showRanking);
-        document.getElementById('close-rank').addEventListener('click', () => {
-            document.getElementById('rank-modal').classList.add('hidden');
-        });
+            score = 0;
+            document.getElementById('score').textContent = "0";
+            init();
+            createPiece();
+            if(gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(() => {
+                if(!collide(0, 1)) currentPiece.y++;
+                else lock();
+                draw();
+            }, 800);
+        }
 
+        // 키 입력
         document.addEventListener('keydown', e => {
-            if (!gameRunning) return;
-            if (e.key === 'ArrowLeft' && !checkCollision(currentBlock.shape, currentBlock.x - 1, currentBlock.y)) currentBlock.x--;
-            if (e.key === 'ArrowRight' && !checkCollision(currentBlock.shape, currentBlock.x + 1, currentBlock.y)) currentBlock.x++;
-            if (e.key === 'ArrowDown') dropBlock();
-            if (e.key === 'ArrowUp') {
-                const nextS = rotate(currentBlock.shape);
-                if (!checkCollision(nextS, currentBlock.x, currentBlock.y)) currentBlock.shape = nextS;
+            if(!gameInterval) return;
+            if(e.key === 'ArrowLeft' && !collide(-1, 0)) currentPiece.x--;
+            if(e.key === 'ArrowRight' && !collide(1, 0)) currentPiece.x++;
+            if(e.key === 'ArrowDown' && !collide(0, 1)) currentPiece.y++;
+            if(e.key === 'ArrowUp') {
+                const rotated = currentPiece.shape[0].map((_, i) => currentPiece.shape.map(row => row[i]).reverse());
+                if(!collide(0, 0, rotated)) currentPiece.shape = rotated;
             }
-            if (e.key === ' ') {
-                while (!checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y + 1)) currentBlock.y++;
-                dropBlock();
+            if(e.key === ' ') {
+                while(!collide(0, 1)) currentPiece.y++;
+                lock();
             }
-            renderBoard();
+            draw();
         });
 
-        initBoard();
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('rank-btn').addEventListener('click', showRank);
+        document.getElementById('close-rank').addEventListener('click', () => document.getElementById('rank-modal').classList.add('hidden'));
+        document.getElementById('restart-btn').addEventListener('click', () => document.getElementById('start-modal').classList.remove('hidden'));
+
+        init();
     </script>
 </body>
 </html>
