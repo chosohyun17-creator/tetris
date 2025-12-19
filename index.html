@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Tetris Game</title>
+    <title>JS Tetris with Ranking</title>
     <style>
-        /* CSS (스타일링) */
         body {
-            font-family: sans-serif;
+            font-family: 'Malgun Gothic', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,12 +23,11 @@
             border-radius: 10px;
             background-color: #34495e;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
-        /* 게임 보드 스타일 */
         #game-board {
-            /* 10칸 x 20칸 격자 설정 */
-            --cell-size: 25px; /* 한 칸 크기 */
+            --cell-size: 25px;
             width: calc(var(--cell-size) * 10);
             height: calc(var(--cell-size) * 20);
             border: 5px solid #2980b9;
@@ -37,127 +35,88 @@
             display: grid;
             grid-template-columns: repeat(10, 1fr); 
             grid-template-rows: repeat(20, 1fr);
-            position: relative;
         }
 
-        /* 개별 블록 (셀) 스타일 */
-        .block {
-            box-sizing: border-box;
-            border: 1px solid rgba(255, 255, 255, 0.05); /* 경계선 */
-            transition: background-color 0.1s ease;
-        }
+        .block { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
+        .block.I { background-color: #00FFFF; }
+        .block.O { background-color: #FFFF00; }
+        .block.T { background-color: #800080; }
+        .block.S { background-color: #00FF00; }
+        .block.Z { background-color: #FF0000; }
+        .block.J { background-color: #0000FF; }
+        .block.L { background-color: #FF7F00; }
 
-        /* 테트로미노 색상 정의 */
-        .block.I { background-color: #00FFFF; border-color: #00CCCC; } /* Cyan */
-        .block.O { background-color: #FFFF00; border-color: #CCCC00; } /* Yellow */
-        .block.T { background-color: #800080; border-color: #660066; } /* Purple */
-        .block.S { background-color: #00FF00; border-color: #00CC00; } /* Green */
-        .block.Z { background-color: #FF0000; border-color: #CC0000; } /* Red */
-        .block.J { background-color: #0000FF; border-color: #0000CC; } /* Blue */
-        .block.L { background-color: #FF7F00; border-color: #CC6600; } /* Orange */
-
-        /* 정보 패널 스타일 */
-        .info-panel {
-            width: 150px;
-        }
-
+        .info-panel { width: 180px; }
         #next-block {
-            width: calc(var(--cell-size) * 4);
-            height: calc(var(--cell-size) * 4);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(4, 1fr);
-            margin-bottom: 20px;
-            border: 2px solid #5499c7;
-            background-color: #1c2833;
+            width: 100px; height: 100px;
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+            border: 2px solid #5499c7; background-color: #1c2833; margin-bottom: 20px;
         }
+        .next-cell { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
 
-        .next-cell {
-            box-sizing: border-box;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        /* 모달 스타일 (이름 입력 및 랭킹) */
+        .modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95); padding: 30px; border-radius: 15px;
+            text-align: center; z-index: 100; min-width: 250px; border: 2px solid #2980b9;
         }
-
-        #game-over-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            font-size: 24px;
-            border-radius: 8px;
-            text-align: center;
-            z-index: 10;
-        }
-
-        .hidden {
-            display: none;
-        }
-
+        .hidden { display: none; }
+        input { padding: 10px; width: 80%; margin-bottom: 15px; border-radius: 5px; border: none; }
         button {
-            padding: 10px 20px;
-            background-color: #2ecc71;
-            border: none;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 10px;
+            padding: 10px 20px; background-color: #2ecc71; border: none;
+            color: white; cursor: pointer; border-radius: 5px; margin: 5px;
         }
-        button:hover {
-            background-color: #27ae60;
-        }
+        button:hover { background-color: #27ae60; }
+        .rank-list { text-align: left; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        .rank-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #444; }
     </style>
 </head>
 <body>
+
     <div class="game-container">
-        <div id="game-board">
-            </div>
+        <div id="game-board"></div>
 
         <div class="info-panel">
-            <h3>테트리스</h3>
+            <h3>TETRIS</h3>
+            <p>Player: <span id="display-name">-</span></p>
             <p>Score: <span id="score">0</span></p>
-            <p>Next Block:</p>
-            <div id="next-block">
-                </div>
-            <button id="start-button">Start Game</button>
-            <p>Controls:</p>
-            <ul>
-                <li>← / →: Move</li>
-                <li>↓: Soft Drop</li>
-                <li>↑ / Z: Rotate</li>
-                <li>Space: Hard Drop</li>
-            </ul>
+            <p>Next:</p>
+            <div id="next-block"></div>
+            <button id="rank-btn">Ranking</button>
+            <div style="font-size: 12px; margin-top: 10px; color: #bdc3c7;">
+                Arrows: Move/Rotate<br>Space: Hard Drop
+            </div>
         </div>
 
-        <div id="game-over-message" class="hidden">
-            Game Over!<br>Press Start to Play Again
+        <div id="name-modal" class="modal">
+            <h2>Enter Name</h2>
+            <input type="text" id="player-name" placeholder="Name" maxlength="10">
+            <br>
+            <button id="start-btn">Game Start</button>
+        </div>
+
+        <div id="rank-modal" class="modal hidden">
+            <h2>Top 10 Rankings</h2>
+            <div id="rank-content" class="rank-list"></div>
+            <button id="close-rank">Close</button>
+        </div>
+
+        <div id="game-over-modal" class="modal hidden">
+            <h2 style="color: #e74c3c;">Game Over</h2>
+            <p>Your Score: <span id="final-score">0</span></p>
+            <button id="restart-btn">Try Again</button>
         </div>
     </div>
 
     <script>
-        // JavaScript (로직)
-
-        const ROWS = 20;
-        const COLS = 10;
-        const CELL_SIZE = 25; // CSS 변수와 일치
-        
+        const ROWS = 20, COLS = 10;
         const gameBoard = document.getElementById('game-board');
         const scoreElement = document.getElementById('score');
         const nextBlockContainer = document.getElementById('next-block');
-        const gameOverMessage = document.getElementById('game-over-message');
-        const startButton = document.getElementById('start-button');
         
-        let board = [];
-        let currentBlock = null;
-        let nextBlockType = null;
-        let gameLoop;
-        let score = 0;
-        let gameRunning = false;
-        let dropInterval = 1000; // 1초
-        
-        // 7가지 테트로미노 정의 (모양과 타입)
+        let board = [], currentBlock = null, nextBlockType = null;
+        let gameLoop, score = 0, gameRunning = false, playerName = "";
+
         const TETROMINOES = {
             'I': { shape: [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]], type: 'I' },
             'J': { shape: [[1,0,0], [1,1,1], [0,0,0]], type: 'J' },
@@ -167,59 +126,40 @@
             'T': { shape: [[0,1,0], [1,1,1], [0,0,0]], type: 'T' },
             'Z': { shape: [[1,1,0], [0,1,1], [0,0,0]], type: 'Z' }
         };
-
         const TETROMINO_KEYS = Object.keys(TETROMINOES);
 
-        // --- 초기화 및 DOM 렌더링 ---
-        
+        // --- 초기화 및 UI 제어 ---
         function initBoard() {
-            // 보드 배열 초기화: 0 = 빈 칸
             board = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
             gameBoard.innerHTML = '';
-            
-            // DOM에 셀 생성
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('block');
-                    // data-row, data-col은 렌더링 시 사용
-                    gameBoard.appendChild(cell);
-                }
+            for (let i = 0; i < ROWS * COLS; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('block');
+                gameBoard.appendChild(cell);
             }
-            // 다음 블록 미리보기 영역 초기화
             nextBlockContainer.innerHTML = '';
-            for (let i = 0; i < 16; i++) { // 4x4
+            for (let i = 0; i < 16; i++) {
                 const cell = document.createElement('div');
                 cell.classList.add('next-cell');
                 nextBlockContainer.appendChild(cell);
             }
         }
 
-        // 2차원 배열 상태를 DOM에 반영
         function renderBoard() {
             const cells = gameBoard.querySelectorAll('.block');
-            
-            // 1. 고정된 블록 렌더링
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const index = r * COLS + c;
-                    cells[index].className = 'block'; // 클래스 초기화
-                    if (board[r][c] !== 0) {
-                        cells[index].classList.add(board[r][c]); // 'I', 'J', 'L' 등의 클래스 추가
-                    }
-                }
-            }
-            
-            // 2. 현재 움직이는 블록 렌더링
+            board.forEach((row, r) => {
+                row.forEach((type, c) => {
+                    const idx = r * COLS + c;
+                    cells[idx].className = 'block' + (type ? ' ' + type : '');
+                });
+            });
             if (currentBlock) {
                 currentBlock.shape.forEach((row, r) => {
-                    row.forEach((cellValue, c) => {
-                        if (cellValue) {
-                            const boardR = currentBlock.y + r;
-                            const boardC = currentBlock.x + c;
-                            if (boardR >= 0 && boardR < ROWS && boardC >= 0 && boardC < COLS) {
-                                const index = boardR * COLS + boardC;
-                                cells[index].classList.add(currentBlock.type);
+                    row.forEach((val, c) => {
+                        if (val) {
+                            const br = currentBlock.y + r, bc = currentBlock.x + c;
+                            if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
+                                cells[br * COLS + bc].className = 'block ' + currentBlock.type;
                             }
                         }
                     });
@@ -230,226 +170,146 @@
 
         function renderNextBlock() {
             const cells = nextBlockContainer.querySelectorAll('.next-cell');
-            cells.forEach(cell => cell.className = 'next-cell'); // 초기화
+            cells.forEach(c => c.className = 'next-cell');
+            const data = TETROMINOES[nextBlockType];
+            let ox = (nextBlockType === 'I') ? 0 : 1;
+            let oy = (nextBlockType === 'I' || nextBlockType === 'O') ? 0 : 1;
 
-            if (nextBlockType) {
-                const blockData = TETROMINOES[nextBlockType];
-                blockData.shape.forEach((row, r) => {
-                    row.forEach((cellValue, c) => {
-                        // 4x4 그리드에 블록을 중앙에 가깝게 그립니다
-                        // O 블록은 2x2, 나머지는 3x3 또는 4x4이므로 적절한 오프셋 필요
-                        if (cellValue) {
-                            const index = (r + 1) * 4 + (c + 1); // 1,1 위치에서 시작
-                            if (index < 16) {
-                                cells[index].classList.add(nextBlockType);
-                            }
-                        }
-                    });
-                });
-            }
-        }
-        
-        // --- 게임 로직 ---
-
-        // 충돌 감지 (벽, 바닥, 고정된 블록)
-        function checkCollision(shape, x, y) {
-            for (let r = 0; r < shape.length; r++) {
-                for (let c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c]) {
-                        const boardR = y + r;
-                        const boardC = x + c;
-
-                        // 1. 경계 검사 (벽/바닥)
-                        if (boardC < 0 || boardC >= COLS || boardR >= ROWS) {
-                            return true; // 벽 또는 바닥 충돌
-                        }
-                        // 2. 고정된 블록 검사 (보드 상단 밖의 충돌은 무시)
-                        if (boardR >= 0 && boardR < ROWS && board[boardR][boardC] !== 0) {
-                            return true; // 고정된 블록 충돌
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        // 새로운 블록을 생성하고 다음 블록을 예약
-        function generateBlock() {
-            // 현재 블록은 이전에 예약된 블록
-            const type = nextBlockType || TETROMINO_KEYS[Math.floor(Math.random() * TETROMINO_KEYS.length)];
-            const data = TETROMINOES[type];
-            
-            currentBlock = {
-                shape: data.shape,
-                type: data.type,
-                x: Math.floor((COLS - data.shape[0].length) / 2), // 중앙 정렬
-                y: 0, 
-            };
-            
-            // 다음 블록 예약
-            nextBlockType = TETROMINO_KEYS[Math.floor(Math.random() * TETROMINO_KEYS.length)];
-            renderNextBlock();
-
-            // 생성 위치에서 바로 충돌하면 게임 오버
-            if (checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y)) {
-                gameOver();
-                return false;
-            }
-            return true;
-        }
-
-        // 블록을 보드에 고정
-        function freezeBlock() {
-            currentBlock.shape.forEach((row, r) => {
-                row.forEach((cellValue, c) => {
-                    if (cellValue) {
-                        const boardR = currentBlock.y + r;
-                        const boardC = currentBlock.x + c;
-                        if (boardR >= 0) {
-                             board[boardR][boardC] = currentBlock.type;
-                        }
+            data.shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if (val) {
+                        const idx = (r + oy) * 4 + (c + ox);
+                        if(cells[idx]) cells[idx].classList.add(nextBlockType);
                     }
                 });
             });
         }
 
-        // 시계 방향 회전 (90도)
-        function rotate(shape) {
-            const N = shape.length;
-            const newShape = Array(N).fill(0).map(() => Array(N).fill(0));
-            for (let r = 0; r < N; r++) {
-                for (let c = 0; c < N; c++) {
-                    newShape[c][N - 1 - r] = shape[r][c];
-                }
-            }
-            return newShape;
+        // --- 게임 로직 ---
+        function checkCollision(shape, x, y) {
+            return shape.some((row, r) => row.some((val, c) => {
+                if (!val) return false;
+                let bc = x + c, br = y + r;
+                return bc < 0 || bc >= COLS || br >= ROWS || (br >= 0 && board[br][bc] !== 0);
+            }));
         }
-        
-        // 줄 제거 및 점수 업데이트
+
+        function generateBlock() {
+            const type = nextBlockType || TETROMINO_KEYS[Math.floor(Math.random() * 7)];
+            nextBlockType = TETROMINO_KEYS[Math.floor(Math.random() * 7)];
+            currentBlock = { shape: TETROMINOES[type].shape, type: type, x: 3, y: 0 };
+            renderNextBlock();
+            if (checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y)) return false;
+            return true;
+        }
+
+        function freezeBlock() {
+            currentBlock.shape.forEach((row, r) => {
+                row.forEach((val, c) => {
+                    if (val && currentBlock.y + r >= 0) board[currentBlock.y + r][currentBlock.x + c] = currentBlock.type;
+                });
+            });
+            clearLines();
+        }
+
         function clearLines() {
-            let linesCleared = 0;
-            
+            let lines = 0;
             for (let r = ROWS - 1; r >= 0; r--) {
-                // 줄이 완전히 찼는지 확인
-                if (board[r].every(cell => cell !== 0)) {
-                    linesCleared++;
-                    
-                    // 해당 줄 제거하고 윗 줄을 내림
-                    for (let r2 = r; r2 > 0; r2--) {
-                        board[r2] = board[r2 - 1];
-                    }
-                    // 가장 윗 줄을 빈 줄로 만듦
-                    board[0] = Array(COLS).fill(0);
-                    
-                    // 줄 제거 후 루프를 다시 시작하여 새로 내려온 줄도 검사
-                    r++;
+                if (board[r].every(v => v !== 0)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    lines++; r++;
                 }
             }
-            
-            if (linesCleared > 0) {
-                // 점수 계산 (테트리스 공식 사용)
-                score += [0, 100, 300, 500, 800][linesCleared] || 0;
-            }
+            score += [0, 100, 300, 500, 800][lines] || 0;
         }
-        
-        // --- 메인 게임 루프 ---
+
+        function rotate(shape) {
+            return shape[0].map((_, i) => shape.map(row => row[i]).reverse());
+        }
 
         function dropBlock() {
-            if (!gameRunning) return;
-
-            // 1. 한 칸 아래로 이동 시도
             if (!checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y + 1)) {
                 currentBlock.y++;
             } else {
-                // 2. 충돌 발생 -> 고정, 줄 제거, 새 블록 생성
                 freezeBlock();
-                clearLines();
-                if (!generateBlock()) {
-                    // Game Over
-                }
+                if (!generateBlock()) gameOver();
             }
             renderBoard();
         }
 
-        // --- 사용자 입력 처리 ---
+        // --- 랭킹 시스템 ---
+        function saveScore(name, score) {
+            let ranks = JSON.parse(localStorage.getItem('tetrisRanks') || '[]');
+            ranks.push({ name, score, date: new Date().toLocaleDateString() });
+            ranks.sort((a, b) => b.score - a.score);
+            localStorage.setItem('tetrisRanks', JSON.stringify(ranks.slice(0, 10)));
+        }
 
-        document.addEventListener('keydown', (e) => {
-            if (!gameRunning || !currentBlock) return;
-            
-            let newX = currentBlock.x;
-            let newY = currentBlock.y;
-            let newShape = currentBlock.shape;
-            
-            switch (e.key) {
-                case 'ArrowLeft':
-                    newX--;
-                    break;
-                case 'ArrowRight':
-                    newX++;
-                    break;
-                case 'ArrowDown': // Soft Drop
-                    newY++;
-                    break;
-                case 'ArrowUp':
-                case 'z':
-                case 'Z': // Rotate
-                    newShape = rotate(currentBlock.shape);
-                    break;
-                case ' ': // Space - Hard Drop
-                    while (!checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y + 1)) {
-                        currentBlock.y++;
-                    }
-                    dropBlock(); // 즉시 고정
-                    return; // dropBlock에서 렌더링/새 블록 생성을 처리했으므로 여기서 종료
-            }
-            
-            // 이동/회전 시 충돌 검사
-            if (!checkCollision(newShape, newX, newY)) {
-                currentBlock.x = newX;
-                currentBlock.y = newY;
-                currentBlock.shape = newShape;
-            }
-            
-            // Soft Drop의 경우 즉시 루프 재설정 (빠르게 떨어지도록)
-            if (e.key === 'ArrowDown') {
-                 // 하강 속도를 빠르게 하기 위해 한 번 더 하강 시도
-                 // dropBlock(); 
-                 // 현재 인터벌을 리셋하여 다음 드롭을 빠르게 할 수도 있지만, 여기서는 간단히 처리
-            }
-            
-            renderBoard();
-        });
+        function showRanking() {
+            const ranks = JSON.parse(localStorage.getItem('tetrisRanks') || '[]');
+            const content = document.getElementById('rank-content');
+            content.innerHTML = ranks.map((r, i) => `
+                <div class="rank-item">
+                    <span>${i+1}. ${r.name}</span>
+                    <span>${r.score}</span>
+                </div>
+            `).join('') || "No records yet!";
+            document.getElementById('rank-modal').classList.remove('hidden');
+        }
 
         // --- 게임 관리 ---
-
         function startGame() {
-            if (gameRunning) return;
-
-            initBoard();
+            const inputName = document.getElementById('player-name').value.trim();
+            if (!inputName) { alert("Please enter your name!"); return; }
+            playerName = inputName;
+            document.getElementById('display-name').textContent = playerName;
+            document.getElementById('name-modal').classList.add('hidden');
+            document.getElementById('game-over-modal').classList.add('hidden');
+            
             score = 0;
-            gameOverMessage.classList.add('hidden');
+            initBoard();
+            generateBlock();
             gameRunning = true;
-
-            // 초기 블록 생성 (다음 블록도 예약됨)
-            generateBlock(); 
-
-            // 게임 루프 시작
-            gameLoop = setInterval(dropBlock, dropInterval);
-            renderBoard();
+            gameLoop = setInterval(dropBlock, 800);
         }
 
         function gameOver() {
             clearInterval(gameLoop);
             gameRunning = false;
-            gameOverMessage.classList.remove('hidden');
+            saveScore(playerName, score);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
-        startButton.addEventListener('click', startGame);
+        // --- 이벤트 리스너 ---
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-modal').classList.add('hidden');
+            document.getElementById('name-modal').classList.remove('hidden');
+        });
+        document.getElementById('rank-btn').addEventListener('click', showRanking);
+        document.getElementById('close-rank').addEventListener('click', () => {
+            document.getElementById('rank-modal').classList.add('hidden');
+        });
 
-        // 페이지 로드 시 초기 보드 렌더링 (게임은 시작 버튼으로 시작)
-        initBoard(); 
-        renderBoard();
-        
+        document.addEventListener('keydown', e => {
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft' && !checkCollision(currentBlock.shape, currentBlock.x - 1, currentBlock.y)) currentBlock.x--;
+            if (e.key === 'ArrowRight' && !checkCollision(currentBlock.shape, currentBlock.x + 1, currentBlock.y)) currentBlock.x++;
+            if (e.key === 'ArrowDown') dropBlock();
+            if (e.key === 'ArrowUp') {
+                const nextS = rotate(currentBlock.shape);
+                if (!checkCollision(nextS, currentBlock.x, currentBlock.y)) currentBlock.shape = nextS;
+            }
+            if (e.key === ' ') {
+                while (!checkCollision(currentBlock.shape, currentBlock.x, currentBlock.y + 1)) currentBlock.y++;
+                dropBlock();
+            }
+            renderBoard();
+        });
+
+        initBoard();
     </script>
 </body>
 </html>
